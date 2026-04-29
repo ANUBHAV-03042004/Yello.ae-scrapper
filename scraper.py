@@ -1,38 +1,57 @@
-import undetected_chromedriver as uc
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from bs4 import BeautifulSoup
-import pandas as pd
 import time
 import re
 import sys
 import argparse
 import os
 from dotenv import load_dotenv
+from bs4 import BeautifulSoup
+import pandas as pd
 
 load_dotenv()
 
 YELLO_EMAIL    = os.getenv("YELLO_EMAIL", "")
 YELLO_PASSWORD = os.getenv("YELLO_PASSWORD", "")
-DELAY          = 2   # seconds between page requests
-EMAIL_DELAY    = 1.5 # seconds between email lookups
+DELAY          = 2
+EMAIL_DELAY    = 1.5
+
+IS_CI = os.getenv("CI") == "true"  # GitHub Actions sets this automatically
 
 # ────────────────────────────────────────────────────────
 
 
 def create_driver():
-    options = uc.ChromeOptions()
-    options.add_argument("--headless=new")           # required on Linux/GitHub Actions
-    options.add_argument("--no-sandbox")             # required in containers
-    options.add_argument("--disable-dev-shm-usage")  # prevents shared memory crashes
-    options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("--disable-popup-blocking")
-    return uc.Chrome(options=options)                # no version_main — auto-detects on Linux
+    if IS_CI:
+        # ── GitHub Actions: plain Selenium + webdriver-manager ──
+        from selenium import webdriver
+        from selenium.webdriver.chrome.service import Service
+        from webdriver_manager.chrome import ChromeDriverManager
+
+        options = webdriver.ChromeOptions()
+        options.add_argument("--headless=new")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--window-size=1920,1080")
+        options.add_argument("--disable-popup-blocking")
+
+        service = Service(ChromeDriverManager().install())
+        return webdriver.Chrome(service=service, options=options)
+    else:
+        # ── Local Windows: undetected_chromedriver to bypass bot detection ──
+        import undetected_chromedriver as uc
+
+        options = uc.ChromeOptions()
+        options.add_argument("--start-maximized")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-popup-blocking")
+        return uc.Chrome(options=options, version_main=147)
 
 
 def login(driver, wait):
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support import expected_conditions as EC
+
     print("\n[Login] Navigating to Yello.ae...")
     driver.get("https://www.yello.ae/sign-in")
     time.sleep(4)
@@ -92,7 +111,6 @@ def get_total_pages(driver, keyword, location):
     except Exception as e:
         print(f"  Could not detect total pages: {e}")
 
-    # Fallback — return soup anyway so page 1 still gets parsed
     print("  Could not detect total, will stop when no new results found.")
     return 99, soup
 
@@ -115,7 +133,6 @@ def get_email(driver, company_id):
             if "@" in email and "." in email:
                 return email
 
-        # Fallback — regex search entire page
         match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', soup.get_text())
         if match:
             return match.group(0)
@@ -155,7 +172,7 @@ def parse_businesses(soup):
                     "Company Name" : name,
                     "Address"      : address,
                     "Phone"        : phone,
-                    "Email"        : "",   # filled later
+                    "Email"        : "",
                     "Profile URL"  : profile,
                 })
 
@@ -167,6 +184,10 @@ def parse_businesses(soup):
 
 
 def scrape():
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.common.by import By
+
     print("=" * 50)
     print("  Yello.ae Business Scraper (with emails)")
     print("=" * 50)
@@ -186,12 +207,13 @@ def scrape():
         KEYWORD  = input("Enter keyword  (e.g. restaurant, hotel, pharmacy): ").strip()
         LOCATION = input("Enter location (e.g. Dubai, Abu Dhabi, Sharjah)  : ").strip()
 
+    print(f"\n[Mode] {'GitHub Actions (CI)' if IS_CI else 'Local Windows'}")
+
     driver = create_driver()
     wait   = WebDriverWait(driver, 20)
 
-    # ── STEP 1: Login ────────────────────────────────────
     if not login(driver, wait):
-        print("\n❌ Cannot proceed without login. Check your .env file.")
+        print("\n❌ Cannot proceed without login. Check your .env / secrets.")
         try:
             driver.quit()
         except Exception:
@@ -202,11 +224,9 @@ def scrape():
     seen_urls = set()
 
     try:
-        # ── STEP 2: Detect total pages ───────────────────
         print(f"\n[Detecting] Fetching page 1 to count results...")
         MAX_PAGES, first_soup = get_total_pages(driver, KEYWORD, LOCATION)
 
-        # ── STEP 3: Scrape listings ──────────────────────
         if first_soup:
             records = parse_businesses(first_soup)
             for r in records:
@@ -251,7 +271,6 @@ def scrape():
             if page < MAX_PAGES:
                 time.sleep(DELAY)
 
-        # ── STEP 4: Fetch emails (already logged in) ─────
         print(f"\n{'='*50}")
         print(f"  Fetching emails for {len(all_data)} companies...")
         print(f"{'='*50}")
@@ -277,7 +296,6 @@ def scrape():
                 not_found += 1
                 print(f"[{i+1}/{len(all_data)}] ❌ {record['Company Name'][:40]} → no email")
 
-            # Save progress every 50 companies
             if (i + 1) % 50 == 0:
                 OUTPUT_TEMP = f"yello_{KEYWORD}_{LOCATION}.xlsx".replace(" ", "_").lower()
                 pd.DataFrame(all_data).to_excel(OUTPUT_TEMP, index=False)
@@ -289,7 +307,6 @@ def scrape():
         except Exception:
             pass
 
-    # ── STEP 5: Save final output ────────────────────────
     if all_data:
         OUTPUT = f"yello_{KEYWORD}_{LOCATION}.xlsx".replace(" ", "_").lower()
         df     = pd.DataFrame(all_data)[["Company Name", "Address", "Phone", "Email", "Profile URL"]]
@@ -303,7 +320,7 @@ def scrape():
         print(f"   Success rate      : {found/len(df)*100:.1f}%")
         print(f"   Saved to          : {OUTPUT}")
         print(f"{'='*50}")
-        print(f"OUTPUT_FILE={OUTPUT}")  # captured by GitHub Actions
+        print(f"OUTPUT_FILE={OUTPUT}")
     else:
         print("\n❌ No data collected.")
         sys.exit(1)
