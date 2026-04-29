@@ -29,6 +29,8 @@ jobs:
 
       - name: Set up Chrome
         uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
 
       - name: Run scraper
         run: |
@@ -40,7 +42,6 @@ jobs:
         env:
           YELLO_EMAIL: ${{ secrets.YELLO_EMAIL }}
           YELLO_PASSWORD: ${{ secrets.YELLO_PASSWORD }}
-          DISPLAY: :99
 
       - name: Upload result
         uses: actions/upload-artifact@v4
