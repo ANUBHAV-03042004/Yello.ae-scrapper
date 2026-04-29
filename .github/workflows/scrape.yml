@@ -1,0 +1,50 @@
+name: Yello Scraper
+
+on:
+  workflow_dispatch:
+    inputs:
+      keyword:
+        description: "Search keyword (e.g. restaurant)"
+        required: true
+      location:
+        description: "Location (e.g. Dubai)"
+        required: true
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Set up Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Run scraper
+        run: |
+          python scraper.py \
+            --keyword "${{ github.event.inputs.keyword }}" \
+            --location "${{ github.event.inputs.location }}" | tee scraper_output.txt
+          OUTPUT=$(grep "OUTPUT_FILE=" scraper_output.txt | cut -d= -f2)
+          echo "OUTPUT_FILE=$OUTPUT" >> $GITHUB_ENV
+        env:
+          YELLO_EMAIL: ${{ secrets.YELLO_EMAIL }}
+          YELLO_PASSWORD: ${{ secrets.YELLO_PASSWORD }}
+          DISPLAY: :99
+
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: scrape-results
+          path: "*.xlsx"
+          retention-days: 7
