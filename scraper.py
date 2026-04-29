@@ -21,22 +21,17 @@ EMAIL_DELAY    = 1.5 # seconds between email lookups
 # ────────────────────────────────────────────────────────
 
 
-# def create_driver():
-#     options = uc.ChromeOptions()
-#     options.add_argument("--start-maximized")
-#     options.add_argument("--no-sandbox")
-#     options.add_argument("--disable-popup-blocking")
-#     return uc.Chrome(options=options, version_main=147)
-
 def create_driver():
     options = uc.ChromeOptions()
-    options.add_argument("--headless=new")        # needed on Linux/GitHub Actions
-    options.add_argument("--no-sandbox")           # required in containers
-    options.add_argument("--disable-dev-shm-usage") # prevents memory issues
+    options.add_argument("--headless=new")           # required on Linux/GitHub Actions
+    options.add_argument("--no-sandbox")             # required in containers
+    options.add_argument("--disable-dev-shm-usage")  # prevents shared memory crashes
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--disable-popup-blocking")
-    return uc.Chrome(options=options)              # remove version_main=147 (let it auto-detect on Linux)
+    return uc.Chrome(options=options)                # no version_main — auto-detects on Linux
+
+
 def login(driver, wait):
     print("\n[Login] Navigating to Yello.ae...")
     driver.get("https://www.yello.ae/sign-in")
@@ -268,7 +263,7 @@ def scrape():
             company_id = extract_company_id(record["Profile URL"])
 
             if not company_id:
-                # print(f"[{i+1}/{len(all_data)}] ⚠️  No ID — {record['Company Name'][:45]}")
+                print(f"[{i+1}/{len(all_data)}] ⚠️  No ID — {record['Company Name'][:45]}")
                 not_found += 1
                 continue
 
@@ -277,10 +272,10 @@ def scrape():
 
             if email:
                 found += 1
-                # print(f"[{i+1}/{len(all_data)}] ✅ {record['Company Name'][:40]} → {email}")
+                print(f"[{i+1}/{len(all_data)}] ✅ {record['Company Name'][:40]} → {email}")
             else:
                 not_found += 1
-                # print(f"[{i+1}/{len(all_data)}] ❌ {record['Company Name'][:40]} → no email")
+                print(f"[{i+1}/{len(all_data)}] ❌ {record['Company Name'][:40]} → no email")
 
             # Save progress every 50 companies
             if (i + 1) % 50 == 0:
