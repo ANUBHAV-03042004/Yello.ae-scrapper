@@ -60,7 +60,7 @@ jobs:
           # Only stage and commit if excel files exist to prevent crashes on 0 results
           if ls *.xlsx 1> /dev/null 2>&1; then
             git add -f *.xlsx
-            git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-scrape: ${{ github.event.inputs.keyword }} in ${{ github.event.inputs.location }}" && git push)
+            git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-scrape: ${{ github.event.inputs.keyword }} in ${{ github.event.inputs.location }}" && git pull --rebase origin main && git push)
           else
             echo "No .xlsx files found to commit."
           fi
