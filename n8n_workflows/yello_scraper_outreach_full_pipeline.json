@@ -248,31 +248,12 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "has_email",
-              "leftValue": "={{ $json.Email }}",
-              "operator": {
-                "type": "string",
-                "operation": "isNotEmpty",
-                "name": "filter.operator.isNotEmpty"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
+        "jsCode": "return $input.all().filter(item => item.json.Email && item.json.Email.includes('@'));"
       },
       "id": "6ea3bb12-ba12-4212-9cbb-aa8241cdaaaa",
       "name": "Filter Emails",
-      "type": "n8n-nodes-base.filter",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
       "position": [
         2360,
         140
