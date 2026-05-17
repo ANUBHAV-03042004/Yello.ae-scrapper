@@ -341,21 +341,7 @@
         }
       }
     },
-    {
-      "parameters": {
-        "content": "### 🛑 Scraper Failed or Stopped\nEnsure your credentials and search terms are correct in GitHub.",
-        "height": 133,
-        "width": 240
-      },
-      "id": "error_note_1",
-      "name": "Error Note",
-      "type": "n8n-nodes-base.note",
-      "typeVersion": 1,
-      "position": [
-        1700,
-        340
-      ]
-    },
+
     {
       "parameters": {
         "pollTimes": {
