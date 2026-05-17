@@ -183,6 +183,23 @@ def parse_businesses(soup):
     return results
 
 
+def clean_excel_string(val):
+    if not isinstance(val, str):
+        return val
+    # Remove control characters that Excel doesn't allow (ASCII 0-31 except tab 9, LF 10, CR 13)
+    return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', val)
+
+
+def clean_records(records):
+    cleaned = []
+    for r in records:
+        cleaned_record = {}
+        for k, v in r.items():
+            cleaned_record[k] = clean_excel_string(v)
+        cleaned.append(cleaned_record)
+    return cleaned
+
+
 def scrape():
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
@@ -298,7 +315,7 @@ def scrape():
 
             if (i + 1) % 50 == 0:
                 OUTPUT_TEMP = f"yello_{KEYWORD}_{LOCATION}.xlsx".replace(" ", "_").lower()
-                pd.DataFrame(all_data).to_excel(OUTPUT_TEMP, index=False)
+                pd.DataFrame(clean_records(all_data)).to_excel(OUTPUT_TEMP, index=False)
                 print(f"\n  💾 Progress saved — {found} emails so far\n")
 
     finally:
@@ -309,7 +326,7 @@ def scrape():
 
     if all_data:
         OUTPUT = f"yello_{KEYWORD}_{LOCATION}.xlsx".replace(" ", "_").lower()
-        df     = pd.DataFrame(all_data)[["Company Name", "Address", "Phone", "Email", "Profile URL"]]
+        df     = pd.DataFrame(clean_records(all_data))[["Company Name", "Address", "Phone", "Email", "Profile URL"]]
         df.to_excel(OUTPUT, index=False)
 
         print(f"\n{'='*50}")
