@@ -1,0 +1,497 @@
+{
+  "name": "1. Yello.ae Scrape and Outreach",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Yello.ae Lead Scraper & Outreach",
+        "formDescription": "Enter the business category and location to scrape leads from Yello.ae and initiate automated email outreach.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Search Keyword (e.g. restaurant, hotel, hospital)",
+              "fieldType": "string",
+              "fieldName": "keyword",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Location (e.g. Dubai, Abu Dhabi, Sharjah)",
+              "fieldType": "string",
+              "fieldName": "location",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f5d72cc1-8e8e-4a69-a292-0b1e4c3a1111",
+      "name": "Form Trigger",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 1,
+      "position": [
+        380,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "owner": "ANUBHAV-03042004",
+        "repository": "Yello.ae-scrapper",
+        "workflowId": "scrape.yml",
+        "ref": "main",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "keyword",
+              "value": "={{ $json.keyword }}"
+            },
+            {
+              "name": "location",
+              "value": "={{ $json.location }}"
+            }
+          ]
+        }
+      },
+      "id": "e4a2bc15-0d04-4c4f-9ef5-18ee210c2222",
+      "name": "Trigger GitHub Action",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1,
+      "position": [
+        600,
+        240
+      ],
+      "credentials": {
+        "githubOAuth2": {
+          "id": "github_auth",
+          "name": "GitHub Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "id": "3be92da3-02f5-4d7a-b51f-6ef738193333",
+      "name": "Wait 30s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        820,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/ANUBHAV-03042004/Yello.ae-scrapper/actions/workflows/scrape.yml/runs?per_page=1",
+        "authentication": "predefined",
+        "options": {}
+      },
+      "id": "c1f72d42-ef12-4cfb-b5ad-ea926b1c4444",
+      "name": "Get Workflow Runs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1020,
+        240
+      ],
+      "credentials": {
+        "githubOAuth2": {
+          "id": "github_auth",
+          "name": "GitHub Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "status_completed",
+              "leftValue": "={{ $json.workflow_runs[0].status }}",
+              "rightValue": "completed",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b1b72e53-df09-42b7-84bc-de510a725555",
+      "name": "Is Scraper Done?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1240,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "conclusion_success",
+              "leftValue": "={{ $json.workflow_runs[0].conclusion }}",
+              "rightValue": "success",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a9a3de83-df81-4221-bf09-2451cb9c6666",
+      "name": "Was Scraper Successful?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1460,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "owner": "ANUBHAV-03042004",
+        "repository": "Yello.ae-scrapper",
+        "filePath": "=yello_{{ $node[\"Form Trigger\"].json.keyword.toLowerCase().replace(/ /g, \"_\") }}_{{ $node[\"Form Trigger\"].json.location.toLowerCase().replace(/ /g, \"_\") }}.xlsx",
+        "asBinaryProperty": true,
+        "binaryPropertyName": "data"
+      },
+      "id": "90e9d123-28f9-4d2a-89a1-56fa189c7777",
+      "name": "Download Scraped Excel",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1,
+      "position": [
+        1700,
+        140
+      ],
+      "credentials": {
+        "githubOAuth2": {
+          "id": "github_auth",
+          "name": "GitHub Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "8c42bb12-9c12-42da-91ab-cc8139aa8888",
+      "name": "Read Excel Data",
+      "type": "n8n-nodes-base.readSpreadsheetFile",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Scraped Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Company Name": "={{ $json[\"Company Name\"] }}",
+            "Address": "={{ $json[\"Address\"] }}",
+            "Phone": "={{ $json[\"Phone\"] }}",
+            "Email": "={{ $json[\"Email\"] }}",
+            "Profile URL": "={{ $json[\"Profile URL\"] }}",
+            "Outreach Status": "Pending"
+          },
+          "matchingColumns": []
+        },
+        "options": {}
+      },
+      "id": "7bf3cc15-df72-4632-ab12-ba25c6899999",
+      "name": "Store in Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2140,
+        140
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google_sheets_auth",
+          "name": "Google Sheets Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has_email",
+              "leftValue": "={{ $json.Email }}",
+              "operator": {
+                "type": "string",
+                "operation": "isNotEmpty",
+                "name": "filter.operator.isNotEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6ea3bb12-ba12-4212-9cbb-aa8241cdaaaa",
+      "name": "Filter Emails",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        2360,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "hi from anubhav",
+        "messageType": "text",
+        "message": "hi from anubhav",
+        "options": {}
+      },
+      "id": "5dc3bb22-cf82-4412-a1b1-ff832a8bbbba",
+      "name": "Send Outreach Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        2580,
+        140
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail_auth",
+          "name": "Gmail Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Scraped Leads",
+          "mode": "name"
+        },
+        "columnToMatchOn": "Email",
+        "valueToMatchOn": "={{ $json.Email }}",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Outreach Status": "Sent",
+            "Outreach Date": "={{ $now.toString() }}"
+          },
+          "matchingColumns": []
+        },
+        "options": {}
+      },
+      "id": "4da2cc88-bf12-4cfb-b7ad-cb82a86ccccc",
+      "name": "Update Sent Status",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2800,
+        140
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google_sheets_auth",
+          "name": "Google Sheets Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "### 🛑 Scraper Failed or Stopped\nEnsure your credentials and search terms are correct in GitHub.",
+        "height": 133,
+        "width": 240
+      },
+      "id": "error_note_1",
+      "name": "Error Note",
+      "type": "n8n-nodes-base.note",
+      "typeVersion": 1,
+      "position": [
+        1700,
+        340
+      ]
+    }
+  ],
+  "connections": {
+    "Form Trigger": {
+      "main": [
+        [
+          {
+            "node": "Trigger GitHub Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger GitHub Action": {
+      "main": [
+        [
+          {
+            "node": "Wait 30s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 30s": {
+      "main": [
+        [
+          {
+            "node": "Get Workflow Runs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Workflow Runs": {
+      "main": [
+        [
+          {
+            "node": "Is Scraper Done?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Scraper Done?": {
+      "main": [
+        [
+          {
+            "node": "Was Scraper Successful?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait 30s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Was Scraper Successful?": {
+      "main": [
+        [
+          {
+            "node": "Download Scraped Excel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Download Scraped Excel": {
+      "main": [
+        [
+          {
+            "node": "Read Excel Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Excel Data": {
+      "main": [
+        [
+          {
+            "node": "Store in Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store in Google Sheet": {
+      "main": [
+        [
+          {
+            "node": "Filter Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Emails": {
+      "main": [
+        [
+          {
+            "node": "Send Outreach Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Send Outreach Email": {
+      "main": [
+        [
+          {
+            "node": "Update Sent Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionTimeout": 3600
+  },
+  "versionId": "bf589d3a-df5c-48c2-a9b1-eb246f7cdd00"
+}
