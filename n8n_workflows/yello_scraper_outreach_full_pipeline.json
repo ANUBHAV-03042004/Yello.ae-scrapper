@@ -197,7 +197,7 @@
       },
       "id": "8c42bb12-9c12-42da-91ab-cc8139aa8888",
       "name": "Read Excel Data",
-      "type": "n8n-nodes-base.readSpreadsheetFile",
+      "type": "n8n-nodes-base.spreadsheetFile",
       "typeVersion": 1,
       "position": [
         1920,
