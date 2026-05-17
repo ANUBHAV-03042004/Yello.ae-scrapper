@@ -1,5 +1,5 @@
 {
-  "name": "1. Yello.ae Scrape and Outreach",
+  "name": "Yello.ae Lead Scraping & Outreach Full Pipeline",
   "nodes": [
     {
       "parameters": {
@@ -281,9 +281,9 @@
     {
       "parameters": {
         "sendTo": "={{ $json.Email }}",
-        "subject": "hi from anubhav",
+        "subject": "IoT, AI/ML & Web Automation Support",
         "messageType": "text",
-        "message": "hi from anubhav",
+        "message": "=Hello,\n\nI hope this email finds you well.\n\nMy name is Anubhav, an Engineer based in India specializing in IoT, AI/ML, Data Science, Full-Stack Web Development, AI Automation, and Web Scraping.\n\nI noticed your business online and wanted to reach out. I help companies build intelligent, automated pipelines, scrape complex datasets, and develop highly scalable full-stack applications.\n\nIf you have any current projects or upcoming needs where my skill set would be valuable, please reply directly to this email. I would be glad to discuss how I can help support your team.\n\nBest regards,\nAnubhav",
         "options": {}
       },
       "id": "5dc3bb22-cf82-4412-a1b1-ff832a8bbbba",
@@ -355,6 +355,89 @@
         1700,
         340
       ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": true,
+        "filters": {
+          "q": "subject:\"IoT, AI/ML & Web Automation Support\""
+        }
+      },
+      "id": "e5c7aab1-df4c-42b7-84bc-24c89abcccc1",
+      "name": "Gmail Trigger (Replies)",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        380,
+        560
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gmail_auth",
+          "name": "Gmail Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const fromHeader = $json.from || '';\nlet email = '';\nlet name = '';\n\n// Match email address inside angle brackets\nconst emailMatch = fromHeader.match(/<([^>]+)>/);\nif (emailMatch) {\n  email = emailMatch[1].trim();\n  name = fromHeader.replace(emailMatch[0], '').replace(/\"/g, '').trim();\n} else {\n  email = fromHeader.trim();\n  name = fromHeader.trim();\n}\n\nreturn {\n  name: name || email,\n  email: email,\n  subject: $json.subject || '',\n  date: $json.date || new Date().toISOString(),\n  snippet: $json.snippet || ''\n};"
+      },
+      "id": "c4d72bc1-12f5-4e7a-a1fb-bc82a17daaaa",
+      "name": "Parse Reply Details",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        600,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Interested Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.name }}",
+            "Email": "={{ $json.email }}",
+            "Subject": "={{ $json.subject }}",
+            "Date": "={{ $json.date }}",
+            "Message Snippet": "={{ $json.snippet }}"
+          },
+          "matchingColumns": []
+        },
+        "options": {}
+      },
+      "id": "8bf12cc1-df7a-42aa-b9ab-5c82a19bbbbb",
+      "name": "Append to Interested Leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        820,
+        560
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google_sheets_auth",
+          "name": "Google Sheets Account"
+        }
+      }
     }
   ],
   "connections": {
@@ -487,11 +570,33 @@
           }
         ]
       ]
+    },
+    "Gmail Trigger (Replies)": {
+      "main": [
+        [
+          {
+            "node": "Parse Reply Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Reply Details": {
+      "main": [
+        [
+          {
+            "node": "Append to Interested Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
     "executionTimeout": 3600
   },
-  "versionId": "bf589d3a-df5c-48c2-a9b1-eb246f7cdd00"
+  "versionId": "cf589d3a-df5c-48c2-a9b1-eb246f7cdd99"
 }
